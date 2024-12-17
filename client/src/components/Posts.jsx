@@ -177,11 +177,11 @@ const Posts = () => {
           {data.posts.map((post) => (
             <motion.div
               key={post.id}
-              className="bg-white shadow-lg rounded-xl overflow-hidden border border-gray-100 hover:shadow-xl transition-all duration-300"
+              className="bg-white shadow-lg rounded-xl overflow-hidden border border-gray-100 hover:shadow-xl transition-all duration-300 flex flex-col"
               whileHover={{ scale: 1.025 }}
               whileTap={{ scale: 0.98 }}
             >
-              <div className="p-6 ">
+              <div className="p-6 flex-grow">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center space-x-3">
                     <div className="bg-indigo-100 text-indigo-600 rounded-full p-2">
@@ -210,8 +210,9 @@ const Posts = () => {
                     {post.content}
                   </p>
                 </Link>
+              </div>
 
-                <div className="flex justify-between items-center  mt-4 pt-4 border-t border-gray-100">
+              <div className="flex justify-between items-center p-6 pt-0 border-t border-gray-100">
                   <div className="flex items-center space-x-4">
                     <button
                       onClick={() => isPostLiked(post.id) ? handleUnlike(post.id) : handleLike(post.id)}
@@ -234,7 +235,6 @@ const Posts = () => {
                   >
                     Read More
                   </Link>
-                </div>
               </div>
             </motion.div>
           ))}
