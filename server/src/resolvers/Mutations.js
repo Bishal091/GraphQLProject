@@ -108,9 +108,22 @@ const Mutation = {
     if (!post) throw new Error("Post not found");
   
     // Check if the user has already liked the post
-    const existingLike = await Like.findOne({ post: postId, author: user.userId });
+    const existingLike = await Like.findOne({ 
+      post: postId, 
+      author: user.userId 
+    });
+  
     if (existingLike) {
-      throw new Error("You have already liked this post");
+      // If already liked, unlike the post
+      await Like.deleteOne({ _id: existingLike._id });
+      
+      // Remove the like from post's likes array
+      post.likes = post.likes.filter(
+        (likeId) => likeId.toString() !== existingLike._id.toString()
+      );
+      await post.save();
+  
+      return post;
     }
   
     // Create a new like
@@ -124,41 +137,12 @@ const Mutation = {
     post.likes.push(newLike._id);
     await post.save();
   
-    // Add the like to the user's likedPosts array
-    const currentUser = await User.findById(user.userId);
-    currentUser.likedPosts.push(newLike._id);
-    await currentUser.save();
+    // Populate the like with author details
+    await newLike.populate('author');
   
-    return post; // Return the updated post with the new likes array
+    return newLike;
   },
-  unlikePost: async (_, { postId }, { user }) => {
-    if (!user) throw new Error("Authentication required");
-  
-    const post = await Post.findById(postId);
-    if (!post) throw new Error("Post not found");
-  
-    // Find the like
-    const like = await Like.findOne({ post: postId, author: user.userId });
-    if (!like) {
-      throw new Error("You have not liked this post");
-    }
-  
-    // Remove the like
-    await like.deleteOne();
-  
-    // Remove the like from the post's likes array
-    post.likes = post.likes.filter((id) => id.toString() !== like._id.toString());
-    await post.save();
-  
-    // Remove the like from the user's likedPosts array
-    const currentUser = await User.findById(user.userId);
-    currentUser.likedPosts = currentUser.likedPosts.filter(
-      (id) => id.toString() !== like._id.toString()
-    );
-    await currentUser.save();
-  
-    return post; // Return the updated post with the updated likes array
-  },
+
 
 };
 

@@ -11,4 +11,12 @@ const postSchema = new Schema({
   comments: [{ type: Schema.Types.ObjectId, ref: "Comment" }], // Reference the Comment model
 });
 
+postSchema.set('toJSON', {
+  transform: (doc, ret) => {
+    ret.id = ret._id.toString();
+    delete ret._id;
+    return ret;
+  }
+});
+
 module.exports = mongoose.model("Post", postSchema);

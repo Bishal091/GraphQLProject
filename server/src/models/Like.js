@@ -7,4 +7,12 @@ const likeSchema = new Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
+likeSchema.set('toJSON', {
+  transform: (doc, ret) => {
+    ret.id = ret._id.toString();
+    delete ret._id;
+    return ret;
+  }
+});
+
 module.exports = mongoose.model("Like", likeSchema);

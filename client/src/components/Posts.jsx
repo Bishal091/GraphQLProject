@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import { useQuery, useMutation } from "@apollo/client";
 import { GET_POSTS } from "../graphql/queries";
-import { LIKE_POST, UNLIKE_POST } from "../graphql/mutations";
+import { LIKE_POST } from "../graphql/mutations";
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
-import { 
-  FaHeart, 
-  FaRegHeart, 
-  FaComment, 
-  FaSpinner, 
+import {
+  FaHeart,
+  FaRegHeart,
+  FaComment,
+  FaSpinner,
   FaEllipsisV,
-  FaUser 
+  FaUser,
 } from "react-icons/fa";
 import { toast } from "react-toastify";
 
@@ -19,30 +19,30 @@ const formatDate = (timestamp) => {
   const now = new Date();
   const diffInSeconds = Math.floor((now - date) / 1000);
 
-  if (diffInSeconds < 60) return 'Just now';
+  if (diffInSeconds < 60) return "Just now";
   if (diffInSeconds < 3600) {
     const mins = Math.floor(diffInSeconds / 60);
-    return `${mins} minute${mins > 1 ? 's' : ''} ago`;
+    return `${mins} minute${mins > 1 ? "s" : ""} ago`;
   }
   if (diffInSeconds < 86400) {
     const hours = Math.floor(diffInSeconds / 3600);
-    return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    return `${hours} hour${hours > 1 ? "s" : ""} ago`;
   }
-  
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
+
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   });
 };
 
 const PostOptionsMenu = ({ postId, authorId }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const currentUser = JSON.parse(localStorage.getItem('user'));
+  const currentUser = JSON.parse(localStorage.getItem("user"));
 
   return (
     <div className="relative">
-      <button 
+      <button
         onClick={() => setIsOpen(!isOpen)}
         className="text-gray-500 hover:text-gray-700"
       >
@@ -52,13 +52,13 @@ const PostOptionsMenu = ({ postId, authorId }) => {
         <div className="absolute right-0 top-full mt-2 w-48 bg-white shadow-lg rounded-md z-10 border">
           {currentUser && currentUser.id === authorId && (
             <>
-              <Link 
+              <Link
                 to={`/edit-post/${postId}`}
                 className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
               >
                 Edit Post
               </Link>
-              <button 
+              <button
                 className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
                 onClick={() => {
                   // Implement delete post logic
@@ -69,7 +69,7 @@ const PostOptionsMenu = ({ postId, authorId }) => {
               </button>
             </>
           )}
-          <button 
+          <button
             className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
             onClick={() => {
               // Implement report post logic
@@ -86,17 +86,66 @@ const PostOptionsMenu = ({ postId, authorId }) => {
 
 const Posts = () => {
   const navigate = useNavigate();
-  const { loading, error, data, refetch } = useQuery(GET_POSTS);
+  const { loading, error, data, refetch } = useQuery(GET_POSTS, {
+    fetchPolicy: "cache-and-network",
+  });
+
   const [likePost] = useMutation(LIKE_POST, {
-    onCompleted: () => refetch(), // Refetch posts after a like
-  });
-  const [unlikePost] = useMutation(UNLIKE_POST, {
-    onCompleted: () => refetch(), // Refetch posts after an unlike
+    update(cache, { data: mutationData }) {
+      // Ensure mutationData exists and has likePost
+      if (!mutationData || !mutationData.likePost) return;
+
+      // Modify the cache to update likes
+      cache.modify({
+        fields: {
+          posts(existingPosts = []) {
+            return existingPosts.map(post => {
+              if (post.id === mutationData.likePost.post.id) {
+                // Create a new post object with updated likes
+                return {
+                  ...post,
+                  likes: mutationData.likePost.post.likes
+                };
+              }
+              return post;
+            });
+          }
+        }
+      });
+    },
+    optimisticResponse: (vars) => ({
+      likePost: {
+        __typename: "Like",
+        id: `temp-${vars.postId}`,
+        post: {
+          __typename: "Post",
+          id: vars.postId,
+          likes: [] // Placeholder, will be updated by server response
+        },
+        author: currentUser
+      }
+    }),
+    onError: (error) => {
+      toast.error(`Error toggling like: ${error.message}`);
+    }
   });
 
-  const [likedPosts, setLikedPosts] = useState({});
+  const currentUser = localStorage.getItem("user")
+    ? JSON.parse(localStorage.getItem("user"))
+    : null;
 
-  const handleLike = async (postId) => {
+  const isPostLiked = (postId) => {
+    if (!currentUser || !data?.posts) return false;
+
+    const post = data.posts.find((p) => p.id === postId);
+    if (!post || !post.likes) return false;
+
+    return post.likes.some(
+      (like) => like && like.author && like.author.id === currentUser.id
+    );
+  };
+
+  const handleLikeToggle = async (postId) => {
     const token = localStorage.getItem("token");
     if (!token) {
       toast.error("Please login to like this post!");
@@ -105,54 +154,35 @@ const Posts = () => {
     }
 
     try {
-      await likePost({ variables: { postId } });
-      setLikedPosts(prev => ({ ...prev, [postId]: true }));
-      // toast.success("Post liked!");
+      await likePost({
+        variables: { postId },
+      });
     } catch (error) {
-      toast.error("Error liking post: " + error.message);
+      console.error("Like toggle error:", error);
     }
   };
 
-  const handleUnlike = async (postId) => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      toast.error("Please login to unlike this post!");
-      navigate("/login");
-      return;
-    }
+  if (loading)
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <motion.span
+          initial={{ rotate: 0 }}
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+        >
+          <FaSpinner className="h-10 w-10 text-indigo-600 animate-spin" />
+        </motion.span>
+      </div>
+    );
 
-    try {
-      await unlikePost({ variables: { postId } });
-      setLikedPosts(prev => ({ ...prev, [postId]: false }));
-      // toast.success("Post unliked!");
-    } catch (error) {
-      toast.error("Error unliking post: " + error.message);
-    }
-  };
-
-  const isPostLiked = (postId) => {
-    return likedPosts[postId] || false;
-  };
-
-  if (loading) return (
-    <div className="flex justify-center items-center h-screen">
-      <motion.span
-        initial={{ rotate: 0 }}
-        animate={{ rotate: 360 }}
-        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-      >
-        <FaSpinner className="h-10 w-10 text-indigo-600 animate-spin" />
-      </motion.span>
-    </div>
-  );
-
-  if (error) return (
-    <div className="container mx-auto px-4 py-8 text-center">
-      <p className="text-red-500 text-xl">
-        Failed to load posts. {error.message}
-      </p>
-    </div>
-  );
+  if (error)
+    return (
+      <div className="container mx-auto px-4 py-8 text-center">
+        <p className="text-red-500 text-xl">
+          Failed to load posts. {error.message}
+        </p>
+      </div>
+    );
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -178,7 +208,7 @@ const Posts = () => {
             <motion.div
               key={post.id}
               className="bg-white shadow-lg rounded-xl overflow-hidden border border-gray-100 hover:shadow-xl transition-all duration-300 flex flex-col"
-              whileHover={{ scale: 1.025 }}
+              whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.98 }}
             >
               <div className="p-6 flex-grow">
@@ -196,10 +226,7 @@ const Posts = () => {
                       </p>
                     </div>
                   </div>
-                  <PostOptionsMenu 
-                    postId={post.id} 
-                    authorId={post.author.id} 
-                  />
+                  <PostOptionsMenu postId={post.id} authorId={post.author.id} />
                 </div>
 
                 <Link to={`/post/${post.id}`} className="block">
@@ -212,29 +239,29 @@ const Posts = () => {
                 </Link>
               </div>
 
-              <div className="flex justify-between items-center p-6 pt-0 border-t border-gray-100">
-                  <div className="flex items-center space-x-4">
-                    <button
-                      onClick={() => isPostLiked(post.id) ? handleUnlike(post.id) : handleLike(post.id)}
-                      className="flex items-center space-x-1 text-red-500 hover:text-red-600"
-                    >
-                      {isPostLiked(post.id) ? <FaHeart /> : <FaRegHeart />}
-                      <span className="text-sm">{post.likes.length}</span>
-                    </button>
-                    <Link
-                      to={`/post/${post.id}`}
-                      className="flex items-center space-x-1 text-gray-500 hover:text-gray-600"
-                    >
-                      <FaComment />
-                      <span className="text-sm">{post.comments.length}</span>
-                    </Link>
-                  </div>
+              <div className="flex justify-between items-center p-3 border-t border-gray-100">
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={() => handleLikeToggle(post.id)}
+                    className="flex items-center space-x-1 text-red-500 hover:text-red-600"
+                  >
+                    {isPostLiked(post.id) ? <FaHeart size={24} /> : <FaRegHeart  size={24}/>}
+                    <span className="text-sm">{post.likes.length}</span>
+                  </button>
                   <Link
                     to={`/post/${post.id}`}
-                    className="text-indigo-600 hover:text-indigo-700 font-medium text-sm"
+                    className="flex items-center space-x-1 text-gray-500 hover:text-gray-600"
                   >
-                    Read More
+                    <FaComment size={24} />
+                    <span className="text-sm">{post.comments.length}</span>
                   </Link>
+                </div>
+                <Link
+                  to={`/post/${post.id}`}
+                  className="text-indigo-600 hover:text-indigo-700 font-medium text-sm"
+                >
+                  Read More
+                </Link>
               </div>
             </motion.div>
           ))}

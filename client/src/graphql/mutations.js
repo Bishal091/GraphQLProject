@@ -59,6 +59,16 @@ export const LIKE_POST = gql`
   mutation LikePost($postId: ID!) {
     likePost(postId: $postId) {
       id
+      post {
+        id
+        likes {
+          id
+          author {
+            id
+            username
+          }
+        }
+      }
       author {
         id
         username
@@ -67,17 +77,3 @@ export const LIKE_POST = gql`
   }
 `;
 
-export const UNLIKE_POST = gql`
-  mutation UnlikePost($postId: ID!) {
-    unlikePost(postId: $postId) {
-      id
-      likes {
-        id
-        author {
-          id
-          username
-        }
-      }
-    }
-  }
-`;
