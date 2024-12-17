@@ -52,8 +52,7 @@ const typeDefs = gql`
     login(username: String!, password: String!): AuthPayload!
     createPost(title: String!, content: String!, tags: [String!]): Post!
     createComment(postId: ID!, content: String!): Comment!
-    likePost(postId: ID!): Like!
-    unlikePost(postId: ID!): Post!
+    likePost(postId: ID!): Like
   }
 `;
 

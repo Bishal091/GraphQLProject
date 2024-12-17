@@ -20,6 +20,12 @@ const Login = () => {
   
       // Store only the token in localStorage
       localStorage.setItem("token", data.login.token);
+      localStorage.setItem('user', JSON.stringify({
+        id: data.login.user.id,
+        username: data.login.user.username,
+        // Add any other relevant user info
+      }));
+  
   
       // Show success notification
       toast.success("Logged in successfully!");

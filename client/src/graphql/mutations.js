@@ -59,21 +59,13 @@ export const LIKE_POST = gql`
   mutation LikePost($postId: ID!) {
     likePost(postId: $postId) {
       id
-      post {
-        id
-        likes {
-          id
-          author {
-            id
-            username
-          }
-        }
-      }
       author {
         id
         username
       }
+      post {
+        id
+      }
     }
   }
 `;
-

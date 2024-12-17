@@ -4,6 +4,11 @@ const Post = require("../models/Post");
 const Comment = require("../models/Comment");
 const Like = require("../models/Like");
 const auth = require("../utils/auth");
+const {
+  AuthenticationError,
+  UserInputError,
+} = require("apollo-server-express");
+const mongoose = require("mongoose");
 
 const Mutation = {
   createUser: async (_, { username, email, password }) => {
@@ -102,48 +107,61 @@ const Mutation = {
     return comment;
   },
   likePost: async (_, { postId }, { user }) => {
-    if (!user) throw new Error("Authentication required");
-  
-    const post = await Post.findById(postId);
-    if (!post) throw new Error("Post not found");
-  
-    // Check if the user has already liked the post
-    const existingLike = await Like.findOne({ 
-      post: postId, 
-      author: user.userId 
+    if (!user) throw new AuthenticationError("Authentication required");
+
+    // Ensure postId is converted to a valid ObjectId
+    const validPostId = new mongoose.Types.ObjectId(postId);
+
+    const post = await Post.findById(validPostId).populate({
+      path: "likes",
+      populate: { path: "author" },
     });
-  
+    if (!post) throw new UserInputError("Post not found");
+
+    // Check if the user has already liked the post
+    const existingLike = await Like.findOne({
+      post: validPostId,
+      author: user.userId,
+    }).populate("author");
+
     if (existingLike) {
-      // If already liked, unlike the post
+      // Unlike the post
       await Like.deleteOne({ _id: existingLike._id });
-      
-      // Remove the like from post's likes array
+
       post.likes = post.likes.filter(
-        (likeId) => likeId.toString() !== existingLike._id.toString()
+        (like) => like.author._id.toString() !== user.userId
       );
       await post.save();
-  
-      return post;
+
+      return null; // Indicate unlike
     }
-  
+
     // Create a new like
     const newLike = new Like({
-      post: postId,
+      post: validPostId,
       author: user.userId,
     });
     await newLike.save();
-  
+
     // Add the like to the post's likes array
-    post.likes.push(newLike._id);
+    post.likes.push(newLike);
     await post.save();
-  
-    // Populate the like with author details
-    await newLike.populate('author');
-  
-    return newLike;
+
+    // Fully populate the new like
+    await newLike.populate("author");
+
+    // Ensure all IDs are converted to strings
+    return {
+      id: newLike._id.toString(),
+      post: {
+        id: post._id.toString(),
+      },
+      author: {
+        id: newLike.author._id.toString(),
+        username: newLike.author.username,
+      },
+    };
   },
-
-
 };
 
 module.exports = Mutation;
