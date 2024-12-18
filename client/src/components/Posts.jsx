@@ -145,7 +145,7 @@ const Posts = () => {
     },
     onError: (error) => {
       console.error("Like mutation error:", error);
-      toast.error(`Error toggling like: ${error.message}`);
+      // toast.error(`Error toggling like: ${error.message}`);
     },
   });
 
@@ -239,7 +239,7 @@ const Posts = () => {
       });
     } catch (error) {
       console.error("Like toggle error:", error);
-      toast.error(`Failed to toggle like: ${error.message}`);
+      // toast.error(`Failed to toggle like: ${error.message}`);
     }
   };
 
@@ -344,7 +344,7 @@ const Posts = () => {
           <div className="relative flex-grow">
             <input
               type="text"
-              placeholder="Search posts..."
+              placeholder="Search posts by title"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-4 pr-12 py-2 border border-r-0 border-gray-300 rounded-l-lg rounded-r-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"

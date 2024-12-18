@@ -43,15 +43,15 @@ async function startServer() {
   server.applyMiddleware({ app });
 
   connect().then(() => {
-    console.log(`${port} connected to Database `);
+    // console.log(`${port} connected to Database `);
   });
   
 
   // Start server
   const PORT = process.env.PORT || 4000;
   app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}${server.graphqlPath}`);
-    console.log("JWT_SECRET:", process.env.JWT_SECRET);
+    // console.log(`Server running at http://localhost:${PORT}${server.graphqlPath}`);
+  
   });
 }
 
