@@ -88,22 +88,29 @@ const Mutation = {
   },
   createComment: async (_, { postId, content }, { user }) => {
     if (!user) throw new Error("Authentication required");
-
+  
     const post = await Post.findById(postId);
     if (!post) throw new Error("Post not found");
-
+  
     // Create the comment with the authenticated user as the author
     const comment = new Comment({
       post: postId,
       content,
       author: user.userId, // Ensure this is set correctly
     });
-
+  
     await comment.save();
-
+  
+    // Add the comment's ID to the post's comments array
+    post.comments.push(comment._id);
+    await post.save();
+  
     // Populate the author field before returning the comment
     await comment.populate("author");
-
+  
+    // Populate the post field before returning the comment
+    await comment.populate("post");
+  
     return comment;
   },
   likePost: async (_, { postId }, { user }) => {

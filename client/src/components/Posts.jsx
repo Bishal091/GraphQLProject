@@ -89,137 +89,147 @@ const Posts = () => {
   const { loading, error, data, refetch } = useQuery(GET_POSTS, {
     fetchPolicy: "cache-and-network",
   });
-  const currentUser = localStorage.getItem("user")
-    ? JSON.parse(localStorage.getItem("user"))
-    : null;
+ 
 
     const [likePost] = useMutation(LIKE_POST, {
       update(cache, { data }) {
-          try {
-              const { posts } = cache.readQuery({ query: GET_POSTS });
-  
-              const updatedPosts = posts.map(post => {
-                  // Check if the post matches the like/unlike operation
-                  if (data && data.likePost && data.likePost.post && post.id === data.likePost.post.id) {
-                      // If data is null or no likePost, it means the post was unliked
-                      if (!data.likePost) {
-                          return {
-                              ...post,
-                              likes: post.likes.filter(
-                                  like => like.author.id !== currentUser.id
-                              )
-                          };
-                      }
-  
-                      // If it's a new like
-                      return {
-                          ...post,
-                          likes: [
-                              ...post.likes, 
-                              {
-                                  id: data.likePost.id,
-                                  author: data.likePost.author
-                              }
-                          ]
-                      };
+        const currentUser = localStorage.getItem("user")
+        ? JSON.parse(localStorage.getItem("user"))
+        : null;
+        try {
+          const { posts } = cache.readQuery({ query: GET_POSTS });
+    
+          const updatedPosts = posts.map(post => {
+            // Check if the post matches the like/unlike operation
+            if (data && data.likePost && post.id === data.likePost.post.id) {
+              // If data is null, it means the post was unliked
+              if (!data.likePost) {
+                return {
+                  ...post,
+                  likes: post.likes.filter(
+                    like => like.author.id !== currentUser.id
+                  )
+                };
+              }
+    
+              // If it's a new like
+              return {
+                ...post,
+                likes: [
+                  ...post.likes, 
+                  {
+                    id: data.likePost.id,
+                    author: data.likePost.author
                   }
-                  return post;
-              });
-  
-              cache.writeQuery({
-                  query: GET_POSTS,
-                  data: { posts: updatedPosts }
-              });
-          } catch (error) {
-              console.error("Cache update error:", error);
-          }
+                ]
+              };
+            }
+            return post;
+          });
+    
+          cache.writeQuery({
+            query: GET_POSTS,
+            data: { posts: updatedPosts }
+          });
+        } catch (error) {
+          console.error("Cache update error:", error);
+        }
       },
       onError: (error) => {
-          console.error("Like mutation error:", error);
-          toast.error(`Error toggling like: ${error.message}`);
+        console.error("Like mutation error:", error);
+        toast.error(`Error toggling like: ${error.message}`);
       }
-  });
-  
-  const handleLikeToggle = async (postId) => {
+    });
+    
+    const handleLikeToggle = async (postId) => {
       const token = localStorage.getItem("token");
       const storedUser = localStorage.getItem("user");
-  
+    
       if (!token) {
-          toast.error("Please login to like this post!");
-          navigate("/login");
-          return;
+        toast.error("Please login to like this post!");
+        navigate("/login");
+        return;
       }
-  
+    
       if (!storedUser) {
-          toast.error("User information not found. Please log in again.");
-          navigate("/login");
-          return;
+        toast.error("User information not found. Please log in again.");
+        navigate("/login");
+        return;
       }
-  
+    
       let currentUser;
       try {
-          currentUser = JSON.parse(storedUser);
+        currentUser = JSON.parse(storedUser);
       } catch (parseError) {
-          toast.error("Error parsing user information. Please log in again.");
-          navigate("/login");
-          return;
+        toast.error("Error parsing user information. Please log in again.");
+        navigate("/login");
+        return;
       }
-  
+    
       if (!currentUser || !currentUser.id) {
-          toast.error("Invalid user information. Please log in again.");
-          navigate("/login");
-          return;
+        toast.error("Invalid user information. Please log in again.");
+        navigate("/login");
+        return;
       }
-  
+    
       try {
-          await likePost({
-              variables: { postId },
-              optimisticResponse: {
-                  likePost: {
-                      __typename: "Like",
-                      id: `temp-${postId}-${currentUser.id}`,
-                      author: {
-                          __typename: "User",
-                          id: currentUser.id,
-                          username: currentUser.username
-                      },
-                      post: {
-                          __typename: "Post",
-                          id: postId
-                      }
+        const result = await likePost({
+          variables: { postId },
+          optimisticResponse: isPostLiked(postId) 
+            ? {
+              likePost: null
+            }
+            : {
+                likePost: {
+                  __typename: "Like",
+                  id: `temp-${postId}-${currentUser.id}`,
+                  author: {
+                    __typename: "User",
+                    id: currentUser.id,
+                    username: currentUser.username
+                  },
+                  post: {
+                    __typename: "Post",
+                    id: postId
                   }
+                }
               }
-          });
+        });
+    
+        // Explicitly refetch to ensure consistency if needed
+        // if (!result.data.likePost) {
+        //   refetch();
+        // }
       } catch (error) {
-          console.error("Like toggle error:", error);
-          toast.error(`Failed to toggle like: ${error.message}`);
+        console.error("Like toggle error:", error);
+        toast.error(`Failed to toggle like: ${error.message}`);
       }
-  };
-  
-const isPostLiked = (postId) => {
-  const storedUser = localStorage.getItem("user");
-  if (!storedUser || !data?.posts) return false;
-
-  let currentUser;
-  try {
-      currentUser = JSON.parse(storedUser);
-  } catch (error) {
-      console.error("Error parsing user", error);
-      return false;
-  }
-
-  if (!currentUser || !currentUser.id) return false;
-
-  const post = data.posts.find((p) => p.id === postId);
-  if (!post || !post.likes) return false;
-
-  return post.likes.some(
-      (like) => 
+    };
+    
+    const isPostLiked = (postId) => {
+      const storedUser = localStorage.getItem("user");
+      if (!storedUser || !data?.posts) return false;
+    
+      let currentUser;
+      try {
+        currentUser = JSON.parse(storedUser);
+      } catch (error) {
+        console.error("Error parsing user", error);
+        return false;
+      }
+    
+      if (!currentUser || !currentUser.id) return false;
+    
+      const post = data.posts.find((p) => p.id === postId);
+      if (!post || !post.likes) return false;
+    
+      return post.likes.some(
+        (like) => 
           like && 
           like.author && 
           like.author.id === currentUser.id
-  );
-};
+      );
+    };
 
 
   if (loading)
