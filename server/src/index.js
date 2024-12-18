@@ -9,6 +9,9 @@ const resolvers = require("./resolvers/index");
 require("dotenv").config(); // Load environment variables from .env file
 
 const port = process.env.PORT || 5555;
+const app = express();
+app.use(cors());
+app.use(bodyParser.json());
 
 const server = new ApolloServer({
   typeDefs,
@@ -34,9 +37,7 @@ const server = new ApolloServer({
   }
 });
 
-const app = express();
-app.use(cors());
-app.use(bodyParser.json());
+
 
 async function startServer() {
   await server.start();
