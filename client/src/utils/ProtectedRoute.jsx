@@ -7,8 +7,7 @@ const ProtectedRoute = ({ children }) => {
 
   useEffect(() => {
     if (!token) {
-      // Trigger toast error only once, after rendering
-      toast.error("Please login to access this page!");
+      console.error("Please login to access this page!");
     }
   }, [token]);
 

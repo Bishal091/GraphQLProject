@@ -57,7 +57,7 @@ const PostDetail = () => {
   return (
     <>
 
-    <button className=" fixed  pr-3 py-1 rounded-lg flex items-center gap-2 text-black" onClick={() => navigate("/")}>
+    <button className=" fixed  px-3 py-1 rounded-lg flex items-center gap-2 text-black" onClick={() => navigate("/")}>
        <FaArrowLeft
          className="text-indigo-600 cursor-pointer bg-gray-400 rounded-full p-1"
          size={36}
@@ -72,19 +72,33 @@ const PostDetail = () => {
 
       {/* Post Details */}
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="bg-white shadow-md rounded-lg p-6 my-8 "
-      >
-        <h1 className="text-3xl font-bold mb-4">{post.title}</h1>
-        <p className="text-gray-700 mb-4">{post.content}</p>
-        <p className="text-sm text-gray-500">
-  Author: <span className="font-bold">{post.author.username}</span> |{" "}
-  {new Date(parseInt(post.createdAt)).toLocaleString()}
-</p>
-
-      </motion.div>
+  initial={{ opacity: 0, y: -20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.5 }}
+  className="bg-white shadow-md rounded-lg p-6 my-8 flex flex-col md:flex-row justify-between"
+>
+  <div className="flex-grow">
+    <h1 className="text-3xl font-bold mb-4">{post.title}</h1>
+    <p className="text-gray-700 mb-4">{post.content}</p>
+    <p className="text-sm text-gray-500">
+      Author: <span className="font-bold">{post.author.username}</span> |{" "}
+      {new Date(parseInt(post.createdAt)).toLocaleString()}
+    </p>
+  </div>
+  
+  {post.tags && post.tags.length > 0 && (
+    <div className="flex flex-wrap gap-2 mt-4 md:mt-0 md:ml-4 justify-start md:justify-end items-start">
+      {post.tags.map((tag, index) => (
+        <span
+          key={index}
+          className="text-xs text-gray-700 bg-gray-100 px-2 py-1 rounded-full hover:bg-indigo-100 hover:text-indigo-700 transition"
+        >
+          {tag}
+        </span>
+      ))}
+    </div>
+  )}
+</motion.div>
 
       {/* Comments Section */}
       <motion.div

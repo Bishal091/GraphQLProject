@@ -6,6 +6,7 @@ export const GET_POSTS = gql`
       id
       title
       content
+      tags
       author {
         id
         username
@@ -30,6 +31,7 @@ export const GET_POST_DETAILS = gql`
       id
       title
       content
+      tags
       author {
         username
       }

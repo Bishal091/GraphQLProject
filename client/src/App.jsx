@@ -7,6 +7,7 @@ import Posts from "./components/Posts";
 import PostDetail from "./components/PostsDetail";
 import CreatePost from "./components/Create";
 import ProtectedRoute from "./utils/ProtectedRoute";
+import About from "./components/About";
 const App = () => {
   return (
     <div>
@@ -16,6 +17,8 @@ const App = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/post/:id" element={<PostDetail />} />
+        <Route path="/about" element={<About />} />
+
         <Route
           path="/create-post"
           element={
