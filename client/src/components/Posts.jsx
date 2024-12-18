@@ -145,14 +145,8 @@ const Posts = () => {
       const token = localStorage.getItem("token");
       const storedUser = localStorage.getItem("user");
     
-      if (!token) {
-        toast.error("Please login to like this post!");
-        navigate("/login");
-        return;
-      }
-    
-      if (!storedUser) {
-        toast.error("User information not found. Please log in again.");
+      if (!token || !storedUser) {
+        toast.error("Please login to like/unlike this post!");
         navigate("/login");
         return;
       }
@@ -166,45 +160,81 @@ const Posts = () => {
         return;
       }
     
-      if (!currentUser || !currentUser.id) {
-        toast.error("Invalid user information. Please log in again.");
-        navigate("/login");
-        return;
-      }
-    
       try {
-        const result = await likePost({
+        await likePost({
           variables: { postId },
-          optimisticResponse: isPostLiked(postId) 
-            ? {
-              likePost: null
-            }
-            : {
-                likePost: {
-                  __typename: "Like",
-                  id: `temp-${postId}-${currentUser.id}`,
-                  author: {
-                    __typename: "User",
-                    id: currentUser.id,
-                    username: currentUser.username
-                  },
-                  post: {
-                    __typename: "Post",
-                    id: postId
-                  }
-                }
+          optimisticResponse: {
+            likePost: {
+              __typename: "Like",
+              id: `toggle-like-${postId}`,
+              author: {
+                __typename: "User",
+                id: currentUser.id,
+                username: currentUser.username
+              },
+              post: {
+                __typename: "Post",
+                id: postId
               }
-        });
+            }
+          },
+          update: (cache, { data }) => {
+            try {
+              const existingPosts = cache.readQuery({ query: GET_POSTS });
+              
+              if (existingPosts && existingPosts.posts) {
+                const updatedPosts = existingPosts.posts.map(post => {
+                  if (post.id === postId) {
+                    const isCurrentUserLike = post.likes.some(
+                      like => like.author.id === currentUser.id
+                    );
     
-        // Explicitly refetch to ensure consistency if needed
-        // if (!result.data.likePost) {
-        //   refetch();
-        // }
+                    if (isCurrentUserLike) {
+                      // Remove the like
+                      return {
+                        ...post,
+                        likes: post.likes.filter(
+                          like => like.author.id !== currentUser.id
+                        )
+                      };
+                    } else {
+                      // Add the like
+                      return {
+                        ...post,
+                        likes: [
+                          ...post.likes,
+                          {
+                            __typename: "Like",
+                            id: `new-like-${postId}-${currentUser.id}`,
+                            author: {
+                              __typename: "User",
+                              id: currentUser.id,
+                              username: currentUser.username
+                            }
+                          }
+                        ]
+                      };
+                    }
+                  }
+                  return post;
+                });
+    
+                cache.writeQuery({
+                  query: GET_POSTS,
+                  data: { posts: updatedPosts }
+                });
+              }
+            } catch (error) {
+              console.error("Cache update error:", error);
+            }
+          }
+        });
       } catch (error) {
         console.error("Like toggle error:", error);
         toast.error(`Failed to toggle like: ${error.message}`);
       }
     };
+    
     
     const isPostLiked = (postId) => {
       const storedUser = localStorage.getItem("user");
@@ -217,8 +247,6 @@ const Posts = () => {
         console.error("Error parsing user", error);
         return false;
       }
-    
-      if (!currentUser || !currentUser.id) return false;
     
       const post = data.posts.find((p) => p.id === postId);
       if (!post || !post.likes) return false;
