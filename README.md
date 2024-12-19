@@ -1,7 +1,7 @@
 # 🚀 **Burrr: GraphQL-Powered Blogging Platform**
 
 <p align="center">
-  <img src="https://via.placeholder.com/800x300.png?text=Burrr+Banner" alt="Burrr Banner" width="800" />
+  <img src="./ss/Banner.png" alt="Burrr Banner" width="800" />
 </p>
 
 **Burrr** is a modern, user-friendly blogging platform built with **React**, **GraphQL**, and **Apollo Client**. It empowers users to create, manage, and engage with posts in a seamless and efficient manner. Whether you're a writer, thinker, or learner, Burrr provides a space for ideas to flourish and communities to thrive.
